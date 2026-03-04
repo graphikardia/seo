@@ -2,6 +2,7 @@ import { useState } from "react";
 import Layout from "@/components/Layout";
 import ScoreDial from "@/components/ScoreDial";
 import { BarChart3, RefreshCw, Globe, CheckCircle, AlertTriangle, Zap } from "lucide-react";
+import { callLLM } from "@/lib/llm";
 
 const TABS = [
   { id:"seo", label:"SEO", color:"purple", desc:"Search Engine Optimization", borderCls:"border-purple-500/50", bgCls:"bg-purple-500/20", textCls:"text-purple-300" },
@@ -30,20 +31,10 @@ export default function Analysis() {
     if (!url.trim()) return;
     setRunning(true); setReport(null); setError("");
     try {
-      const resp = await fetch("https://api.anthropic.com/v1/messages", {
-        method:"POST",
-        headers: (() => { const k = agentStore.getApiKey(); const h: Record<string,string> = {"Content-Type":"application/json"}; if(k) h["x-api-key"]=k; return h; })(),
-        body: JSON.stringify({
-          model:"claude-sonnet-4-20250514",
-          max_tokens:1000,
-          messages:[{ role:"user", content:`Perform a detailed ${tab.label} (${tab.desc}) analysis for website: ${url}
+      const text = await callLLM(`Perform a detailed ${tab.label} (${tab.desc}) analysis for website: ${url}
 Be specific and actionable. Respond ONLY with valid JSON, no markdown or extra text:
-{"score":65,"grade":"C","overview":"2-sentence analysis of current state","wins":["specific win 1","specific win 2","specific win 3"],"gaps":[{"issue":"specific gap","fix":"specific fix action","effort":"Low","impact":"High"},{"issue":"specific gap 2","fix":"specific fix 2","effort":"Medium","impact":"High"},{"issue":"specific gap 3","fix":"specific fix 3","effort":"High","impact":"Medium"}],"quickWins":["quick win 1","quick win 2","quick win 3"],"kpis":[{"metric":"metric name","current":"current value","target":"target value"},{"metric":"metric 2","current":"value","target":"value"},{"metric":"metric 3","current":"value","target":"value"}]}` }]
-        })
-      });
-      const data = await resp.json();
-      const text = (data.content||[]).map((b:any)=>b.text||"").join("").replace(/```json|```/g,"").trim();
-      setReport(JSON.parse(text));
+{"score":65,"grade":"C","overview":"2-sentence analysis of current state","wins":["specific win 1","specific win 2","specific win 3"],"gaps":[{"issue":"specific gap","fix":"specific fix action","effort":"Low","impact":"High"},{"issue":"specific gap 2","fix":"specific fix 2","effort":"Medium","impact":"High"},{"issue":"specific gap 3","fix":"specific fix 3","effort":"High","impact":"Medium"}],"quickWins":["quick win 1","quick win 2","quick win 3"],"kpis":[{"metric":"metric name","current":"current value","target":"target value"},{"metric":"metric 2","current":"value","target":"value"},{"metric":"metric 3","current":"value","target":"value"}]}`);
+      setReport(JSON.parse(text.replace(/```json|```/g,"").trim()));
     } catch(e) { setError("Analysis failed — check API key in Settings."); }
     setRunning(false);
   };
