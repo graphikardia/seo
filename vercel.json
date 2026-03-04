@@ -1,7 +1,7 @@
 {
-  "buildCommand": "npm run build:client",
+  "buildCommand": "npm install --legacy-peer-deps && npm run build:client",
   "outputDirectory": "dist/spa",
-  "installCommand": "npm install -g pnpm && pnpm install",
+  "installCommand": "npm install --legacy-peer-deps",
   "framework": null,
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
