@@ -89,7 +89,7 @@ Return ONLY valid JSON, no markdown:
     const blob = new Blob([csv], { type: "text/csv" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `keywords-${seed.replace(/\s+/g,"-")}.csv`;
+    a.download = "keywords-" + seed.replace(/\s+/g,"-") + ".csv";
     a.click();
   };
 
