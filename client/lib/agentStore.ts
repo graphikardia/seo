@@ -177,7 +177,7 @@ class AgentStore {
 
   getSettings(): AppSettings {
     try {
-      const stored = sessionStorage.getItem("ws_settings");
+      const stored = localStorage.getItem("ws_settings");
       if (stored) this.settings = { ...DEFAULT_SETTINGS, ...JSON.parse(stored) };
     } catch {}
     return { ...this.settings };
@@ -185,7 +185,7 @@ class AgentStore {
 
   saveSettings(s: Partial<AppSettings>) {
     this.settings = { ...this.settings, ...s };
-    try { sessionStorage.setItem("ws_settings", JSON.stringify(this.settings)); } catch {}
+    try { localStorage.setItem("ws_settings", JSON.stringify(this.settings)); } catch {}
     this.notify();
   }
 
