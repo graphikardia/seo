@@ -213,20 +213,66 @@ export default function AutoPost() {
     setReadyPosts(prev=>prev.map(p=>p.platform===platform?{...p,content}:p));
 
   const handleManualPost=async(platform:Platform)=>{
-    setManualPosting(prev=>new Set([...prev,platform]));
-    await new Promise(r=>setTimeout(r,1200));
     const post=readyPosts.find(p=>p.platform===platform);
-    if(post){
-      const imp=Math.floor(Math.random()*600+100);
-      const lks=Math.floor(imp*(0.03+Math.random()*0.07));
-      const shr=Math.floor(lks*(0.1+Math.random()*0.2));
-      const clk=Math.floor(imp*(0.02+Math.random()*0.05));
+    if(!post) return;
+    const settings=agentStore.getSettings();
+    const tokenMap:Record<Platform,string>={
+      twitter:settings.twitterToken,
+      linkedin:settings.linkedinToken,
+      facebook:settings.facebookToken,
+      instagram:settings.instagramToken,
+    };
+    const token=tokenMap[platform];
+    if(!token){
       agentStore.addPost({
-        id:Date.now().toString(36),platform,content:post.content,topic,
-        status:"posted",scheduledFor:null,postedAt:new Date().toISOString(),
-        postUrl:`https://${platform}.com/post/${Date.now()}`,error:null,
-        metrics:{impressions:imp,likes:lks,shares:shr,clicks:clk,engagementRate:parseFloat(((lks+shr+clk)/imp*100).toFixed(1))},
-        agentGenerated:true,hashtags:post.hashtags,contentType:post.contentType,visualIdea:post.visualIdea,
+        id:Date.now().toString(36),platform,content:post.content,topic,tone,
+        status:"failed",createdAt:new Date().toISOString(),
+        error:`No ${platform} token set. Add it in Settings → Social Publishing Keys.`,
+      });
+      setReadyPosts(prev=>prev.filter(p=>p.platform!==platform));
+      return;
+    }
+    setManualPosting(prev=>new Set([...prev,platform]));
+    try{
+      let ok=false;let errorMsg="";
+      if(platform==="twitter"){
+        const resp=await fetch("https://api.twitter.com/2/tweets",{
+          method:"POST",
+          headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},
+          body:JSON.stringify({text:post.content}),
+        });
+        if(resp.ok){ok=true;}else{const d=await resp.json().catch(()=>({}));errorMsg=(d as any)?.detail||(d as any)?.errors?.[0]?.message||`Twitter error ${resp.status}`;}
+      } else if(platform==="linkedin"){
+        const resp=await fetch("https://api.linkedin.com/v2/ugcPosts",{
+          method:"POST",
+          headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`,"X-Restli-Protocol-Version":"2.0.0"},
+          body:JSON.stringify({author:`urn:li:person:me`,lifecycleState:"PUBLISHED",specificContent:{"com.linkedin.ugc.ShareContent":{shareCommentary:{text:post.content},shareMediaCategory:"NONE"}},visibility:{"com.linkedin.ugc.MemberNetworkVisibility":"PUBLIC"}}),
+        });
+        if(resp.ok){ok=true;}else{const d=await resp.json().catch(()=>({}));errorMsg=(d as any)?.message||`LinkedIn error ${resp.status}`;}
+      } else if(platform==="facebook"){
+        const resp=await fetch(`https://graph.facebook.com/me/feed`,{
+          method:"POST",
+          headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},
+          body:JSON.stringify({message:post.content}),
+        });
+        if(resp.ok){ok=true;}else{const d=await resp.json().catch(()=>({}));errorMsg=(d as any)?.error?.message||`Facebook error ${resp.status}`;}
+      } else if(platform==="instagram"){
+        errorMsg="Instagram posting requires a two-step Media API call — use Meta Business Suite or a server-side proxy.";
+      }
+      agentStore.addPost({
+        id:Date.now().toString(36),platform,content:post.content,topic,tone,
+        status:ok?"posted":"failed",
+        createdAt:new Date().toISOString(),
+        postedAt:ok?new Date().toISOString():undefined,
+        error:ok?null:errorMsg,
+      });
+      if(ok) setReadyPosts(prev=>prev.filter(p=>p.platform!==platform));
+    }catch(e:any){
+      const isCors=e.message?.includes("fetch")||e.message?.includes("network");
+      agentStore.addPost({
+        id:Date.now().toString(36),platform,content:post.content,topic,tone,
+        status:"failed",createdAt:new Date().toISOString(),
+        error:isCors?`CORS blocked — ${platform} API must be called server-side. Copy the post and publish manually.`:e.message,
       });
     }
     setManualPosting(prev=>{const s=new Set(prev);s.delete(platform);return s;});
@@ -234,7 +280,7 @@ export default function AutoPost() {
 
   const runAgent=async()=>{
     if(!topic.trim()||selectedPlatforms.size===0)return;
-    if(!agentStore.getSettings().anthropicKey){setApiKeyMissing(true);return;}
+    if(!agentStore.getApiKey()){setApiKeyMissing(true);return;}
     abortRef.current=new AbortController();
     setAgentRunning(true);setError("");setLog([]);setReadyPosts([]);setCurrentStep(0);setProgress(0);
     try{
