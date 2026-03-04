@@ -153,7 +153,7 @@
   }
 
   .card-glow {
-    @apply bg-card border border-cyan-500/20 rounded-lg shadow-lg hover:shadow-xl hover:shadow-cyan-500/20 transition-all duration-300;
+    @apply bg-slate-900 border border-cyan-500/20 rounded-lg shadow-lg hover:shadow-xl hover:shadow-cyan-500/20 transition-all duration-300;
   }
 
   .terminal {
@@ -164,3 +164,4 @@
     @apply relative w-24 h-24;
   }
 }
+    
