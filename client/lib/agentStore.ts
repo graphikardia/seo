@@ -1,6 +1,5 @@
 /**
- * Shared in-memory store for agent state, API keys, and results.
- * Supports multiple free LLM providers.
+ * Shared in-memory store for agent state, API keys, results, and post history.
  */
 
 export interface AgentResult {
@@ -9,6 +8,20 @@ export interface AgentResult {
   url: string;
   completedAt: string;
   data: Record<string, unknown>;
+}
+
+export interface PostRecord {
+  id: string;
+  platform: string;
+  content: string;
+  topic: string;
+  tone: string;
+  status: "queued" | "posting" | "posted" | "scheduled" | "failed";
+  createdAt: string;
+  scheduledFor?: string;
+  postedAt?: string;
+  error?: string | null;
+  metrics?: { impressions: number; clicks: number; likes: number };
 }
 
 export type LLMProvider = "anthropic" | "groq" | "cerebras" | "openrouter" | "mistral" | "google";
@@ -147,6 +160,7 @@ type Listener = () => void;
 
 class AgentStore {
   private results: AgentResult[] = [];
+  private posts: PostRecord[] = [];
   private settings: AppSettings = { ...DEFAULT_SETTINGS };
   private listeners: Set<Listener> = new Set();
 
@@ -158,6 +172,8 @@ class AgentStore {
   private notify() {
     this.listeners.forEach(fn => fn());
   }
+
+  // ── Settings ──────────────────────────────────────────────────────────────
 
   getSettings(): AppSettings {
     try {
@@ -191,6 +207,8 @@ class AgentStore {
     return PROVIDERS.find(p => p.id === s.llmProvider) ?? PROVIDERS[0];
   }
 
+  // ── Agent results ─────────────────────────────────────────────────────────
+
   addResult(r: AgentResult) {
     this.results = [r, ...this.results.filter(x => x.agentId !== r.agentId)];
     this.notify();
@@ -206,6 +224,28 @@ class AgentStore {
 
   clearResults() {
     this.results = [];
+    this.notify();
+  }
+
+  // ── Post history (AutoPost) ───────────────────────────────────────────────
+
+  getPosts(): PostRecord[] {
+    return [...this.posts];
+  }
+
+  addPost(p: PostRecord) {
+    this.posts.unshift(p);
+    this.notify();
+  }
+
+  updatePost(id: string, patch: Partial<PostRecord>) {
+    const idx = this.posts.findIndex(p => p.id === id);
+    if (idx !== -1) this.posts[idx] = { ...this.posts[idx], ...patch };
+    this.notify();
+  }
+
+  clearPosts() {
+    this.posts = [];
     this.notify();
   }
 }
