@@ -1,8 +1,7 @@
 import { useState } from "react";
 import Layout from "@/components/Layout";
 import { Search, RefreshCw, TrendingUp, Target, Copy, CheckCircle, Download } from "lucide-react";
-import { agentStore } from "@/lib/agentStore";
-
+import { callLLM } from "@/lib/llm";
 interface KeywordData {
   seedKeyword: string;
   intent: string;
@@ -37,26 +36,14 @@ export default function KeywordResearch() {
     if (!seed.trim()) return;
     setLoading(true); setError(""); setData(null);
     try {
-      const apiKey = agentStore.getApiKey();
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (apiKey) headers["x-api-key"] = apiKey;
-
-      const resp = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          messages: [{
-            role: "user",
-            content: `You are a keyword research expert. Perform comprehensive keyword research for seed keyword: "${seed}" in the ${industry || "general"} industry.
+      const text = await callLLM(`You are a keyword research expert. Perform comprehensive keyword research for seed keyword: "${seed}" in the ${industry || "general"} industry.
 Provide realistic keyword difficulty, search volume tiers, and actionable insights.
 Return ONLY valid JSON, no markdown:
 {
-  "seedKeyword": "${seed}",
-  "intent": "informational|commercial|transactional|navigational",
+  "seedKeyword": "seed_kw",
+  "intent": "informational",
   "relatedKeywords": [
-    {"keyword": "...", "difficulty": "Easy|Medium|Hard|Very Hard", "volume": "100-1K|1K-10K|10K-100K|100K+", "opportunity": "High|Medium|Low", "cpc": "$0.00"},
+    {"keyword": "...", "difficulty": "Easy", "volume": "1K-10K", "opportunity": "High", "cpc": "$1.50"},
     {"keyword": "...", "difficulty": "Medium", "volume": "1K-10K", "opportunity": "High", "cpc": "$2.50"},
     {"keyword": "...", "difficulty": "Easy", "volume": "100-1K", "opportunity": "High", "cpc": "$1.20"},
     {"keyword": "...", "difficulty": "Hard", "volume": "10K-100K", "opportunity": "Medium", "cpc": "$5.00"},
@@ -72,8 +59,8 @@ Return ONLY valid JSON, no markdown:
     {"keyword": "what is ...", "type": "definition", "intent": "informational", "suggestedContent": "Definition + guide"}
   ],
   "topicClusters": [
-    {"pillar": "Complete Guide to ${seed}", "clusters": ["subtopic 1", "subtopic 2", "subtopic 3", "subtopic 4"]},
-    {"pillar": "Best ${seed} for Beginners", "clusters": ["subtopic 1", "subtopic 2", "subtopic 3"]}
+    {"pillar": "Complete Guide", "clusters": ["subtopic 1", "subtopic 2", "subtopic 3", "subtopic 4"]},
+    {"pillar": "Beginner Guide", "clusters": ["subtopic 1", "subtopic 2", "subtopic 3"]}
   ],
   "negativeKeywords": ["free", "download", "torrent", "crack", "cheap"],
   "competitorKeywords": [
@@ -86,13 +73,8 @@ Return ONLY valid JSON, no markdown:
     {"quadrant": "Low Hanging Fruit (Easy + Low Volume)", "keywords": ["kw5","kw6"], "action": "Target for early ranking wins"},
     {"quadrant": "Skip for Now (Hard + Low Volume)", "keywords": ["kw7"], "action": "Revisit after DA increase"}
   ]
-}`
-          }]
-        })
-      });
-      const res = await resp.json();
-      const text = (res.content || []).map((b: any) => b.text || "").join("").replace(/```json|```/g, "").trim();
-      setData(JSON.parse(text));
+}\`);
+      setData(JSON.parse(text.replace(/\`\`\`json|\`\`\`/g, "").trim()))
     } catch (e: any) {
       setError("Research failed — check your API key in Settings.");
     }
