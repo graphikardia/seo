@@ -32,7 +32,7 @@ export default function Analysis() {
     try {
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
         method:"POST",
-        headers: (() => { const k = agentStore.getApiKey(); const h: Record<string,string> = {"Content-Type":"application/json"}; if(k) h["x-api-key"]=k; return h; })(),,
+        headers: (() => { const k = agentStore.getApiKey(); const h: Record<string,string> = {"Content-Type":"application/json"}; if(k) h["x-api-key"]=k; return h; })(),
         body: JSON.stringify({
           model:"claude-sonnet-4-20250514",
           max_tokens:1000,
