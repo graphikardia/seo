@@ -196,7 +196,7 @@ export default function AutoPost() {
   useEffect(()=>{
     const unsub=agentStore.subscribe(()=>setPostHistory(agentStore.getPosts()));
     setPostHistory(agentStore.getPosts());
-    setApiKeyMissing(!agentStore.getSettings().anthropicKey);
+    setApiKeyMissing(!agentStore.getApiKey());
     return unsub;
   },[]);
 
@@ -362,7 +362,7 @@ export default function AutoPost() {
               {apiKeyMissing&&(
                 <div className="p-4 bg-orange-500/10 border border-orange-500/30 rounded-xl flex items-start gap-3">
                   <AlertCircle className="w-4 h-4 text-orange-400 shrink-0 mt-0.5"/>
-                  <p className="text-sm text-orange-300">Add your Anthropic API key in <a href="/settings" className="underline hover:text-orange-200">Settings</a> to activate the agent.</p>
+                  <p className="text-sm text-orange-300">Add your API key in <a href="/settings" className="underline hover:text-orange-200">Settings</a> to activate the agent.</p>
                 </div>
               )}
 
