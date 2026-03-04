@@ -1,7 +1,6 @@
 import { useState } from "react";
 import Layout from "@/components/Layout";
-import { agentStore } from "@/lib/agentStore";
-
+import { callLLM } from "@/lib/llm";
 import { BookOpen, Sparkles, RefreshCw, Copy, CheckCircle, ChevronRight, Hash, Clock, FileText } from "lucide-react";
 
 const TEMPLATES = [
@@ -39,25 +38,12 @@ export default function ContentHub() {
     if (!topic.trim()) return;
     setGenerating(true); setError(""); setContent(null);
     try {
-      const resp = await fetch("https://api.anthropic.com/v1/messages", {
-        method:"POST",
-        headers: (() => { const k = agentStore.getApiKey(); const h: Record<string,string> = {"Content-Type":"application/json"}; if(k) h["x-api-key"]=k; return h; })(),
-        body: JSON.stringify({
-          model:"claude-sonnet-4-20250514",
-          max_tokens:1000,
-          messages:[{
-            role:"user",
-            content:`Create a ${template.name} blog post plan about: "${topic}".
+      const text = await callLLM(`Create a ${template.name} blog post plan about: "${topic}".
 Target keyword: "${keyword || topic}". Audience: "${audience || "general readers"}".
 Optimize simultaneously for SEO (keyword placement, headers), AEO (direct answers, FAQ format for AI engines), and GEO (structured for LLM citation).
 Respond ONLY with valid JSON, no markdown:
-{"title":"...","metaDescription":"...","excerpt":"2-3 sentence hook","outline":["H2 section 1","H2 section 2","H2 section 3","H2 section 4","H2 section 5"],"faqs":[{"q":"...","a":"..."},{"q":"...","a":"..."},{"q":"...","a":"..."}],"keywords":["kw1","kw2","kw3","kw4","kw5","kw6"],"estimatedWordCount":1800,"readingTime":"7 min","schemaMarkup":"Article"}`
-          }]
-        })
-      });
-      const data = await resp.json();
-      const text = (data.content || []).map((b: any) => b.text || "").join("").replace(/```json|```/g,"").trim();
-      setContent(JSON.parse(text));
+{"title":"...","metaDescription":"...","excerpt":"2-3 sentence hook","outline":["H2 section 1","H2 section 2","H2 section 3","H2 section 4","H2 section 5"],"faqs":[{"q":"...","a":"..."},{"q":"...","a":"..."},{"q":"...","a":"..."}],"keywords":["kw1","kw2","kw3","kw4","kw5","kw6"],"estimatedWordCount":1800,"readingTime":"7 min","schemaMarkup":"Article"}`);
+      setContent(JSON.parse(text.replace(/```json|```/g,"").trim()));
     } catch(e) {
       setError("Generation failed — check your API key in Settings.");
     }
