@@ -36,45 +36,9 @@ export default function KeywordResearch() {
     if (!seed.trim()) return;
     setLoading(true); setError(""); setData(null);
     try {
-      const text = await callLLM(`You are a keyword research expert. Perform comprehensive keyword research for seed keyword: "${seed}" in the ${industry || "general"} industry.
-Provide realistic keyword difficulty, search volume tiers, and actionable insights.
-Return ONLY valid JSON, no markdown:
-{
-  "seedKeyword": "seed_kw",
-  "intent": "informational",
-  "relatedKeywords": [
-    {"keyword": "...", "difficulty": "Easy", "volume": "1K-10K", "opportunity": "High", "cpc": "$1.50"},
-    {"keyword": "...", "difficulty": "Medium", "volume": "1K-10K", "opportunity": "High", "cpc": "$2.50"},
-    {"keyword": "...", "difficulty": "Easy", "volume": "100-1K", "opportunity": "High", "cpc": "$1.20"},
-    {"keyword": "...", "difficulty": "Hard", "volume": "10K-100K", "opportunity": "Medium", "cpc": "$5.00"},
-    {"keyword": "...", "difficulty": "Medium", "volume": "1K-10K", "opportunity": "Medium", "cpc": "$3.10"},
-    {"keyword": "...", "difficulty": "Easy", "volume": "100-1K", "opportunity": "High", "cpc": "$0.80"}
-  ],
-  "longTailKeywords": [
-    {"keyword": "how to ...", "type": "how-to", "intent": "informational", "suggestedContent": "Step-by-step guide"},
-    {"keyword": "best ... for ...", "type": "comparison", "intent": "commercial", "suggestedContent": "Comparison listicle"},
-    {"keyword": "... vs ...", "type": "vs", "intent": "commercial", "suggestedContent": "Comparison article"},
-    {"keyword": "... price", "type": "pricing", "intent": "transactional", "suggestedContent": "Pricing page"},
-    {"keyword": "... review", "type": "review", "intent": "commercial", "suggestedContent": "In-depth review post"},
-    {"keyword": "what is ...", "type": "definition", "intent": "informational", "suggestedContent": "Definition + guide"}
-  ],
-  "topicClusters": [
-    {"pillar": "Complete Guide", "clusters": ["subtopic 1", "subtopic 2", "subtopic 3", "subtopic 4"]},
-    {"pillar": "Beginner Guide", "clusters": ["subtopic 1", "subtopic 2", "subtopic 3"]}
-  ],
-  "negativeKeywords": ["free", "download", "torrent", "crack", "cheap"],
-  "competitorKeywords": [
-    {"competitor": "competitor1.com", "topKeywords": ["kw1","kw2","kw3"]},
-    {"competitor": "competitor2.com", "topKeywords": ["kw4","kw5","kw6"]}
-  ],
-  "priorityMatrix": [
-    {"quadrant": "Quick Wins (Easy + High Volume)", "keywords": ["kw1","kw2"], "action": "Create content immediately"},
-    {"quadrant": "Long-term (Hard + High Volume)", "keywords": ["kw3","kw4"], "action": "Build authority first"},
-    {"quadrant": "Low Hanging Fruit (Easy + Low Volume)", "keywords": ["kw5","kw6"], "action": "Target for early ranking wins"},
-    {"quadrant": "Skip for Now (Hard + Low Volume)", "keywords": ["kw7"], "action": "Revisit after DA increase"}
-  ]
-}\`);
-      setData(JSON.parse(text.replace(/\`\`\`json|\`\`\`/g, "").trim()))
+      const prompt = "You are a keyword research expert. Perform comprehensive keyword research for seed keyword: \"" + seed + "\" in the " + (industry || "general") + " industry.\nProvide realistic keyword difficulty, search volume tiers, and actionable insights.\nReturn ONLY valid JSON, no markdown:\n{\"seedKeyword\":\"" + seed + "\",\"intent\":\"informational\",\"relatedKeywords\":[{\"keyword\":\"...\",\"difficulty\":\"Easy\",\"volume\":\"1K-10K\",\"opportunity\":\"High\",\"cpc\":\"$1.50\"},{\"keyword\":\"...\",\"difficulty\":\"Medium\",\"volume\":\"1K-10K\",\"opportunity\":\"High\",\"cpc\":\"$2.50\"},{\"keyword\":\"...\",\"difficulty\":\"Easy\",\"volume\":\"100-1K\",\"opportunity\":\"High\",\"cpc\":\"$1.20\"},{\"keyword\":\"...\",\"difficulty\":\"Hard\",\"volume\":\"10K-100K\",\"opportunity\":\"Medium\",\"cpc\":\"$5.00\"},{\"keyword\":\"...\",\"difficulty\":\"Medium\",\"volume\":\"1K-10K\",\"opportunity\":\"Medium\",\"cpc\":\"$3.10\"},{\"keyword\":\"...\",\"difficulty\":\"Easy\",\"volume\":\"100-1K\",\"opportunity\":\"High\",\"cpc\":\"$0.80\"}],\"longTailKeywords\":[{\"keyword\":\"how to ...\",\"type\":\"how-to\",\"intent\":\"informational\",\"suggestedContent\":\"Step-by-step guide\"},{\"keyword\":\"best ... for ...\",\"type\":\"comparison\",\"intent\":\"commercial\",\"suggestedContent\":\"Comparison listicle\"},{\"keyword\":\"... vs ...\",\"type\":\"vs\",\"intent\":\"commercial\",\"suggestedContent\":\"Comparison article\"},{\"keyword\":\"... price\",\"type\":\"pricing\",\"intent\":\"transactional\",\"suggestedContent\":\"Pricing page\"},{\"keyword\":\"... review\",\"type\":\"review\",\"intent\":\"commercial\",\"suggestedContent\":\"In-depth review post\"},{\"keyword\":\"what is ...\",\"type\":\"definition\",\"intent\":\"informational\",\"suggestedContent\":\"Definition + guide\"}],\"topicClusters\":[{\"pillar\":\"Complete Guide\",\"clusters\":[\"subtopic 1\",\"subtopic 2\",\"subtopic 3\",\"subtopic 4\"]},{\"pillar\":\"Beginner Guide\",\"clusters\":[\"subtopic 1\",\"subtopic 2\",\"subtopic 3\"]}],\"negativeKeywords\":[\"free\",\"download\",\"torrent\",\"crack\",\"cheap\"],\"competitorKeywords\":[{\"competitor\":\"competitor1.com\",\"topKeywords\":[\"kw1\",\"kw2\",\"kw3\"]},{\"competitor\":\"competitor2.com\",\"topKeywords\":[\"kw4\",\"kw5\",\"kw6\"]}],\"priorityMatrix\":[{\"quadrant\":\"Quick Wins\",\"keywords\":[\"kw1\",\"kw2\"],\"action\":\"Create content immediately\"},{\"quadrant\":\"Long-term\",\"keywords\":[\"kw3\",\"kw4\"],\"action\":\"Build authority first\"},{\"quadrant\":\"Low Hanging Fruit\",\"keywords\":[\"kw5\",\"kw6\"],\"action\":\"Target for early ranking wins\"},{\"quadrant\":\"Skip for Now\",\"keywords\":[\"kw7\"],\"action\":\"Revisit after DA increase\"}]}";
+      const text = await callLLM(prompt);
+      setData(JSON.parse(text.replace(/```json|```/g, "").trim()))
     } catch (e: any) {
       setError("Research failed — check your API key in Settings.");
     }
