@@ -184,7 +184,7 @@ export default function AIAgents() {
     });
     setResults(agentStore.getResults());
     const settings = agentStore.getSettings();
-    setApiKeyMissing(!settings.anthropicKey);
+    setApiKeyMissing(!agentStore.getApiKey());
     return unsub;
   }, []);
 
@@ -201,8 +201,8 @@ export default function AIAgents() {
     if (running.has(agent.id)) return;
 
     const settings = agentStore.getSettings();
-    if (!settings.anthropicKey) {
-      setErrors(prev => ({ ...prev, [agent.id]: "No API key — go to Settings to add your Anthropic key." }));
+    if (!agentStore.getApiKey()) {
+      setErrors(prev => ({ ...prev, [agent.id]: `No API key — go to Settings to add your ${agentStore.getProviderConfig().name} key.` }));
       setApiKeyMissing(true);
       return;
     }
