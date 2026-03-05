@@ -229,50 +229,50 @@ export default function AutoPost() {
         status:"failed",createdAt:new Date().toISOString(),
         error:`No ${platform} token set. Add it in Settings → Social Publishing Keys.`,
       });
-      setReadyPosts(prev=>prev.filter(p=>p.platform!==platform));
       return;
     }
     setManualPosting(prev=>new Set([...prev,platform]));
     try{
-      let ok=false;let errorMsg="";
-      if(platform==="twitter"){
-        const resp=await fetch("https://api.twitter.com/2/tweets",{
-          method:"POST",
-          headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},
-          body:JSON.stringify({text:post.content}),
+      let endpoint="";
+      if(platform==="twitter") endpoint="/api/post-twitter";
+      else if(platform==="linkedin") endpoint="/api/post-linkedin";
+      else if(platform==="facebook") endpoint="/api/post-facebook";
+      else {
+        agentStore.addPost({
+          id:Date.now().toString(36),platform,content:post.content,topic,tone,
+          status:"failed",createdAt:new Date().toISOString(),
+          error:"Instagram requires a two-step Media API — use Meta Business Suite to post manually.",
         });
-        if(resp.ok){ok=true;}else{const d=await resp.json().catch(()=>({}));errorMsg=(d as any)?.detail||(d as any)?.errors?.[0]?.message||`Twitter error ${resp.status}`;}
-      } else if(platform==="linkedin"){
-        const resp=await fetch("https://api.linkedin.com/v2/ugcPosts",{
-          method:"POST",
-          headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`,"X-Restli-Protocol-Version":"2.0.0"},
-          body:JSON.stringify({author:`urn:li:person:me`,lifecycleState:"PUBLISHED",specificContent:{"com.linkedin.ugc.ShareContent":{shareCommentary:{text:post.content},shareMediaCategory:"NONE"}},visibility:{"com.linkedin.ugc.MemberNetworkVisibility":"PUBLIC"}}),
-        });
-        if(resp.ok){ok=true;}else{const d=await resp.json().catch(()=>({}));errorMsg=(d as any)?.message||`LinkedIn error ${resp.status}`;}
-      } else if(platform==="facebook"){
-        const resp=await fetch(`https://graph.facebook.com/me/feed`,{
-          method:"POST",
-          headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},
-          body:JSON.stringify({message:post.content}),
-        });
-        if(resp.ok){ok=true;}else{const d=await resp.json().catch(()=>({}));errorMsg=(d as any)?.error?.message||`Facebook error ${resp.status}`;}
-      } else if(platform==="instagram"){
-        errorMsg="Instagram posting requires a two-step Media API call — use Meta Business Suite or a server-side proxy.";
+        setManualPosting(prev=>{const s=new Set(prev);s.delete(platform);return s;});
+        return;
       }
-      agentStore.addPost({
-        id:Date.now().toString(36),platform,content:post.content,topic,tone,
-        status:ok?"posted":"failed",
-        createdAt:new Date().toISOString(),
-        postedAt:ok?new Date().toISOString():undefined,
-        error:ok?null:errorMsg,
+
+      const resp=await fetch(endpoint,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({content:post.content,token}),
       });
-      if(ok) setReadyPosts(prev=>prev.filter(p=>p.platform!==platform));
+      const result=await resp.json();
+
+      if(resp.ok && result.success){
+        agentStore.addPost({
+          id:Date.now().toString(36),platform,content:post.content,topic,tone,
+          status:"posted",createdAt:new Date().toISOString(),
+          postedAt:new Date().toISOString(),error:null,
+        });
+        setReadyPosts(prev=>prev.filter(p=>p.platform!==platform));
+      } else {
+        agentStore.addPost({
+          id:Date.now().toString(36),platform,content:post.content,topic,tone,
+          status:"failed",createdAt:new Date().toISOString(),
+          error:result.error||"Post failed",
+        });
+      }
     }catch(e:any){
-      const isCors=e.message?.includes("fetch")||e.message?.includes("network");
       agentStore.addPost({
         id:Date.now().toString(36),platform,content:post.content,topic,tone,
         status:"failed",createdAt:new Date().toISOString(),
-        error:isCors?`CORS blocked — ${platform} API must be called server-side. Copy the post and publish manually.`:e.message,
+        error:e.message||"Network error",
       });
     }
     setManualPosting(prev=>{const s=new Set(prev);s.delete(platform);return s;});
